@@ -10,6 +10,7 @@ import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
 import time
+import copy
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
@@ -22,13 +23,18 @@ from torch.utils.data import DataLoader, TensorDataset
 # Setting
 # ============================================================
 
-HIDDEN_LAYERS = [64, 32]
+HIDDEN_LAYERS = [32, 16]
 
-LEARNING_RATE = 0.01
+LEARNING_RATE = 0.001
 
 EPOCHS = 100
 
 DROPOUT_RATE = 0.0
+
+# Early Stopping
+PATIENCE = 15       # 検証Lossが改善しないことを許容するエポック数
+MIN_DELTA = 0.0     # 改善とみなす最小のLoss減少量
+
 
 
 # Device selection
@@ -89,6 +95,20 @@ class NeuralNetwork(nn.Module):
 # ==========================================
 # Excel形式で保存されている場合
 df = pd.read_excel("./data/Dry_Bean_Dataset/Dry_Bean_Dataset.xlsx")
+
+# 削除対象となる重複行を抽出（デフォルトでは最初の1件を残し、2件目以降がTrueになる）
+duplicates = df[df.duplicated()]
+
+# 重複データが存在する場合のみ中身と件数をprint表示
+if len(duplicates) > 0:
+    print(f"削除対象の重複データ {len(duplicates)} 件を削除します")
+    # print(duplicates)
+else:
+    print("重複データはありませんでした。")
+
+# 重複を削除して更新
+df = df.drop_duplicates()
+
 
 X = df.drop(columns=["Class"])
 Y = df["Class"]
@@ -177,16 +197,18 @@ start_time = time.perf_counter()
 
 print("--- 学習開始 ---")
 
-
-# train_losses = []
-# test_losses = []
-
 history = { 
             "train_loss": [],
             "valid_loss": [],
             "train_acc": [],
             "valid_acc": []
             }
+
+# Early Stopping用の変数
+best_valid_loss = float("inf")
+best_model_state = copy.deepcopy(model.state_dict())
+patience_counter = 0
+best_epoch = 0
 
 
 for epoch in range(EPOCHS):
@@ -269,7 +291,7 @@ for epoch in range(EPOCHS):
                 batch_y.cpu().numpy()
             )
     
-        valid_loss /= len(train_loader.dataset)
+        valid_loss /= len(test_loader.dataset)
     
         valid_acc = accuracy_score(
             all_targets,
@@ -290,6 +312,27 @@ for epoch in range(EPOCHS):
             f"Train Acc: {train_acc:.4f} | "
             f"Valid Acc: {valid_acc:.4f}"
         )
+
+    # ----- Early Stopping -----
+    if valid_loss < best_valid_loss - MIN_DELTA:
+
+        best_valid_loss = valid_loss
+        best_model_state = copy.deepcopy(model.state_dict())
+        best_epoch = epoch + 1
+        patience_counter = 0
+
+    else:
+        patience_counter += 1
+
+
+    # patience回連続で改善しなければ終了
+    if patience_counter >= PATIENCE:
+        print(f"\nEarly Stopping: Epoch {epoch + 1}")
+        break
+
+
+# 最良だったエポックのモデルに戻す
+model.load_state_dict(best_model_state)
 
 
 print("--- 学習完了 ---")
@@ -372,6 +415,9 @@ model.eval()
 
 with torch.no_grad():
 
+    # .to(device)
+    X_test_tensor = X_test_tensor.to(device)
+
     outputs = model(X_test_tensor)
 
     # 最も確率の高いクラスを取得
@@ -379,7 +425,7 @@ with torch.no_grad():
 
     accuracy = accuracy_score(
         Y_test,
-        predicted_classes.numpy()
+        predicted_classes.cpu().numpy()
     )
 
 print(f"Validation Accuracy: {accuracy * 100:.2f}%")
@@ -390,7 +436,7 @@ print(f"Validation Accuracy: {accuracy * 100:.2f}%")
 # ==========================================
 
 predicted_labels = encoder.inverse_transform(
-    predicted_classes.numpy()
+    predicted_classes.cpu().numpy()
 )
 
 result_df = pd.DataFrame({
