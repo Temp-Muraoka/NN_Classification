@@ -26,12 +26,12 @@ import os
 # ============================================================
 # Setting
 # ============================================================
-TRIAL_N = 10 #探索回数
+TRIAL_N = 20 #探索回数
 
 
 # HIDDEN_LAYERS = [32, 16]
 
-# LEARNING_RATE = 0.001
+LEARNING_RATE = 0.001
 
 EPOCHS = 100 #Earlystoppingするので、十分大きい数
 
@@ -50,7 +50,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"使用中の実行デバイス: {device}")
 
 # Google Drive 上の保存用ディレクトリを作成
-save_dir = "/content/drive/MyDrive/optuna_results"
+save_dir = "/content/drive//MyDrive/Colab Notebooks/NN_regression/optuna_results"
 os.makedirs(save_dir, exist_ok=True)
 
 # データベース（.db）と CSV の保存パスを設定
@@ -213,8 +213,8 @@ def objective(trial):
     # ドロップアウト率を決める（例: 0.0〜0.5）
     drop_rate_trial = trial.suggest_float('drop_rate', 0.0, 0.5, step=0.1)
     
-    # 学習率を決める（対数スケール log=True で 1e-4 〜 1e-2 を探す）
-    lr_trial = trial.suggest_float('lr', 1e-4, 1e-2, log=True)
+    # # 学習率を決める（対数スケール log=True で 1e-4 〜 1e-2 を探す）
+    # lr_trial = trial.suggest_float('lr', 1e-4, 1e-2, log=True)
 
     # ============================================================
     # Initialize Model
@@ -234,7 +234,7 @@ def objective(trial):
 
     criterion = nn.CrossEntropyLoss()
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr_trial)
+    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
 
 
     # ==========================================
@@ -254,6 +254,7 @@ def objective(trial):
         model.train()
 
         train_loss = 0.0
+        train_correct = 0
 
         all_predictions = []
         all_targets = []
@@ -278,25 +279,21 @@ def objective(trial):
 
             predictions = outputs.argmax(dim=1)
 
-            all_predictions.extend(
-                predictions.cpu().numpy()
-            )
-
-            all_targets.extend(
-                batch_y.cpu().numpy()
-            )
-
+            train_correct += (predictions == batch_y).sum().item()
+            
+            # all_predictions.extend(predictions.cpu().numpy())
+            # all_targets.extend(batch_y.cpu().numpy())
+    
         train_loss /= len(train_loader.dataset)
-
-        train_acc = accuracy_score(
-            all_targets,
-            all_predictions
-        )
+    
+        train_acc = train_correct / len(train_loader.dataset)
+        # train_acc = accuracy_score(all_targets,all_predictions))
 
         # ----- Validation -----
         model.eval()
 
         valid_loss = 0.0
+        valid_correct = 0
         all_predictions = []
         all_targets = []
 
@@ -316,20 +313,14 @@ def objective(trial):
 
                 predictions = outputs.argmax(dim=1)
         
-                all_predictions.extend(
-                    predictions.cpu().numpy()
-                )
+                valid_correct += (predictions == batch_y).sum().item()
+                # all_predictions.extend(predictions.cpu().numpy())    
+                # all_targets.extend(batch_y.cpu().numpy())
         
-                all_targets.extend(
-                    batch_y.cpu().numpy()
-                )
-        
-            valid_loss /= len(train_loader.dataset)
-        
-            valid_acc = accuracy_score(
-                all_targets,
-                all_predictions
-            )
+            valid_loss /= len(test_loader.dataset)
+    
+            valid_acc = valid_correct / len(test_loader.dataset)
+            # valid_acc = accuracy_score(all_targets,all_predictions)
 
 
 

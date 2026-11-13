@@ -23,13 +23,14 @@ from torch.utils.data import DataLoader, TensorDataset
 # Setting
 # ============================================================
 
-HIDDEN_LAYERS = [32, 16]
+HIDDEN_LAYERS = [128]
+# HIDDEN_LAYERS = [32, 16]
 
 LEARNING_RATE = 0.001
 
 EPOCHS = 100
 
-DROPOUT_RATE = 0.0
+DROPOUT_RATE = 0.2
 
 # Early Stopping
 PATIENCE = 15       # 検証Lossが改善しないことを許容するエポック数
@@ -217,13 +218,14 @@ for epoch in range(EPOCHS):
     model.train()
 
     train_loss = 0.0
+    train_correct = 0  # GPU上で正解率計算のために使用
 
     all_predictions = []
     all_targets = []
 
     for batch_X, batch_y in train_loader:
 
-        # .to(device)
+        # .to(device) GPU転送　
         batch_X = batch_X.to(device)
         batch_y = batch_y.to(device)
 
@@ -241,20 +243,15 @@ for epoch in range(EPOCHS):
 
         predictions = outputs.argmax(dim=1)
 
-        all_predictions.extend(
-            predictions.cpu().numpy()
-        )
+        train_correct += (predictions == batch_y).sum().item()
 
-        all_targets.extend(
-            batch_y.cpu().numpy()
-        )
+        # all_predictions.extend(predictions.cpu().numpy())
+        # all_targets.extend(batch_y.cpu().numpy())
 
     train_loss /= len(train_loader.dataset)
 
-    train_acc = accuracy_score(
-        all_targets,
-        all_predictions
-    )
+    train_acc = train_correct / len(train_loader.dataset)
+    # train_acc = accuracy_score(all_targets,all_predictions)
 
     history["train_loss"].append(train_loss)
     history["train_acc"].append(train_acc)
@@ -264,6 +261,7 @@ for epoch in range(EPOCHS):
     model.eval()
 
     valid_loss = 0.0
+    valid_correct = 0
     all_predictions = []
     all_targets = []
 
@@ -282,21 +280,15 @@ for epoch in range(EPOCHS):
             valid_loss += loss.item() * batch_X.size(0)
 
             predictions = outputs.argmax(dim=1)
-    
-            all_predictions.extend(
-                predictions.cpu().numpy()
-            )
-    
-            all_targets.extend(
-                batch_y.cpu().numpy()
-            )
+
+            valid_correct += (predictions == batch_y).sum().item()
+            # all_predictions.extend(predictions.cpu().numpy())    
+            # all_targets.extend(batch_y.cpu().numpy())
     
         valid_loss /= len(test_loader.dataset)
-    
-        valid_acc = accuracy_score(
-            all_targets,
-            all_predictions
-        )
+
+        valid_acc = valid_correct / len(test_loader.dataset)
+        # valid_acc = accuracy_score(all_targets,all_predictions)
     
         history["valid_loss"].append(valid_loss)
         history["valid_acc"].append(valid_acc)
@@ -423,10 +415,11 @@ with torch.no_grad():
     # 最も確率の高いクラスを取得
     predicted_classes = outputs.argmax(dim=1)
 
-    accuracy = accuracy_score(
-        Y_test,
-        predicted_classes.cpu().numpy()
-    )
+    # ここで1回だけCPUのNumPy配列に変換して使い回す
+    pred_np = predicted_classes.cpu().numpy()  
+
+    accuracy = accuracy_score(Y_test, pred_np)
+
 
 print(f"Validation Accuracy: {accuracy * 100:.2f}%")
 
@@ -435,9 +428,7 @@ print(f"Validation Accuracy: {accuracy * 100:.2f}%")
 # 8. 予測結果の保存
 # ==========================================
 
-predicted_labels = encoder.inverse_transform(
-    predicted_classes.cpu().numpy()
-)
+predicted_labels = encoder.inverse_transform(pred_np)
 
 result_df = pd.DataFrame({
 
