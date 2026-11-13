@@ -250,6 +250,11 @@ def objective(trial):
 
     for epoch in range(EPOCHS):
 
+        # ----------------------------------------------------
+        # 進捗の動的上書き表示
+        # ----------------------------------------------------
+        print(f"{epoch + 1}epoch", end="\r", flush=True)
+
         # ----- Training -----
         model.train()
 
@@ -346,6 +351,12 @@ def objective(trial):
         f"Train Acc: {best_train_acc:.4f} | Valid Acc: {best_valid_acc:.4f}"
     )
 
+    # --- 【追加】Trial終了時に UserAttrs へ保存 ---
+    trial.set_user_attr("best_epoch", best_epoch + 1)
+    trial.set_user_attr("best_train_loss", best_train_loss)
+    trial.set_user_attr("best_train_acc", best_train_acc)
+    trial.set_user_attr("best_valid_acc", best_valid_acc)
+
     return best_valid_loss
 
 # Optuna Study の作成または既存 DB からの読み込み
@@ -374,7 +385,22 @@ for key, val in study.best_params.items():
     print(f"  - {key}: {val}")
 print(f"履歴保存先: {csv_path}")
 
+# --- 最も良かったTrialから情報を取得 ---
+best_trial = study.best_trial
 
+best_epoch = best_trial.user_attrs.get("best_epoch")
+best_train_loss = best_trial.user_attrs.get("best_train_loss")
+best_valid_acc = best_trial.user_attrs.get("best_valid_acc")
+
+print("ハイパーパラメータチューニング完了！")
+print(f"ベストTrial番号: {best_trial.number}")
+print(f"ベストエポック: {best_epoch} エポック目")
+print(f"ベスト検証 Loss (Valid Loss): {best_trial.value:.4f}")
+print(f"ベスト訓練 Loss: {best_train_loss:.4f}")
+print(f"ベスト検証 正解率 (Valid Acc): {best_valid_acc:.4f}")
+print("ベストパラメータ:")
+for key, val in best_trial.params.items():
+    print(f"  - {key}: {val}")
 
 elapsed_time = time.perf_counter() - start_time
 
