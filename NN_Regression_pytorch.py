@@ -147,7 +147,7 @@ scaler = StandardScaler()
 X_train = scaler.fit_transform(X_train)
 X_test = scaler.transform(X_test)
 
-# Tensorに変換
+# Tensorに変換（ここでGPU転送もできるが、データ量多い場合メモリ不足する。ここではbachごと伝送）
 X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
 Y_train_tensor = torch.tensor(Y_train, dtype=torch.long)
 

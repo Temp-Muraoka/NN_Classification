@@ -293,8 +293,6 @@ def objective(trial):
             all_predictions
         )
 
-
-
         # ----- Validation -----
         model.eval()
 
@@ -362,17 +360,16 @@ def objective(trial):
 # Optuna Study の作成または既存 DB からの読み込み
 study = optuna.create_study(
     study_name="subrutin_nn_tuning",
-    storage=f"sqlite:///{db_path}",  # Google Drive 上の SQLite DB
-    load_if_exists=True,             # ★重要: DBが存在すれば自動で続きから再開
+    # storage=f"sqlite:///{db_path}",  # Google Drive 上の SQLite DB
+    # load_if_exists=True,             # ★重要: DBが存在すれば自動で続きから再開
     direction="minimize",            # 目的関数（Lossなど）を最小化する場合
     pruner=optuna.pruners.MedianPruner()  # 枝刈り用（任意）
 )
 
 print(f"現在完了している Trial 数: {len(study.trials)}")
 
-# 探索の実行（例: 合計100回になるまで実行、または timeout=14400 で4時間制限）
-# ※途中切断されても、次回実行時はここまでの続き（例: 31回目）から始まります
-study.optimize(objective, n_trials=50)
+# 探索の実行
+study.optimize(objective, n_trials=TRIAL_N)
 
 # 完了後に結果を CSV としても Google Drive に出力
 df = study.trials_dataframe()
