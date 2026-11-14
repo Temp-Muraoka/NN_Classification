@@ -1,10 +1,16 @@
 # 内容
-## NN_Regression_pytorch
+## NN_Classification_pytorch
 ニューラルネットワークを用いた他クラス分類
 pytorchを使用
 
-## NN_Regression_optuna
+## NN_Classification_optuna
 Optuna(最適化ライブラリ)を用いたハイパーパラメータ探索
+
+## NN_Classification_optuna_Kfold
+上記にk-分割交差検証を導入したもの
+
+## Colab_run.ipynb
+Google Colab上で実行するコード
 
 
 # Dataset
