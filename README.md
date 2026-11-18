@@ -1,42 +1,222 @@
-# 内容
-## NN_Classification_pytorch
-ニューラルネットワークを用いた他クラス分類
-pytorchを使用
+# Neural Network Classification with PyTorch
 
-## NN_Classification_optuna
-Optuna(最適化ライブラリ)を用いたハイパーパラメータ探索
+## Overview
 
-## NN_Classification_optuna_Kfold
-上記にk-分割交差検証を導入したもの
+PyTorchを用いたニューラルネットワークによる多クラス分類の実装です。
 
-## Colab_run.ipynb
-Google Colab上で実行するコード
+Dry Bean Datasetを使用し、全結合ニューラルネットワーク（Multi-Layer Perceptron: MLP）による分類モデルを構築します。
 
+基本的なモデル構築・学習に加え、Optunaによるハイパーパラメータ探索、およびStratified K-Foldによる交差検証を実装しています。
 
-# Dataset
-Dry Bean Dataset（乾燥豆データセット）
+## Objectives
 
-• サンプル数（行数） 13,611粒（欠損値や重複データはなし）。
-• 特徴量（説明変数） 16個の数値データ（12個の次元・サイズ指標と、4個の形状指標）。
-• 目的変数（Class） 7種類の豆の品種名（文字列データ）。
+- PyTorchを用いたニューラルネットワークの構築・学習
+- 隠れ層数・ユニット数・Dropout率などのモデル構造の変更
+- Optunaによるハイパーパラメータ最適化
+- Early Stoppingによる過学習の抑制
+- Stratified K-Foldによる交差検証を用いたモデル評価
 
-## 分類クラス
-• Seker（丸みを帯びた品種）
-• Barbunya（うずら豆に近い品種）
-• Bombay（非常に大粒で他と区別しやすい品種）
-• Cali（Barbunyaと特徴が似ており誤分類されやすい品種）
-• Horoz（細長い形状の品種）
-• Sira（Dermasonと特徴が似ている品種）
-• Dermason（最もサンプル数が多い標準的な品種）
+## Dataset
 
-## 特徴量feature
+### Dry Bean Dataset
 
-|カテゴリ|	特徴量名（英語）|	概要・意味
-|---|---|---|
-|サイズ・次元（12個）|	Area, Perimeter|	豆の領域の面積（ピクセル数）と外周の長さ|
-|	|MajorAxisLength, MinorAxisLength|	豆にフィットさせた楕円の長軸と短軸の長さ|
-|	|AspectRation, Eccentricity|	アスペクト比（長軸÷短軸）と離心率（楕円の扁平度）|
-|	|ConvexArea, EquivDiameter|	凸包（豆を囲む最小の凸多角形）の面積と、同じ面積を持つ円の直径|
-|	|Extent, Solidity|	バウンディングボックス（外接矩形）に対する面積比と、凸包に対する面積比|
-|	|roundness, Compactness|	真円度とコンパクトさ（円にどれだけ近いかの指標）|
-|形状係数（4個）|	ShapeFactor1 ～ ShapeFactor4|	長軸・短軸・面積などを組み合わせて算出された独自の形状指標|
+乾燥豆の形状・寸法情報から、豆の品種を分類するデータセットです。
+
+| Item | Description |
+|---|---|
+| Number of samples | 13,611 |
+| Number of features | 16 |
+| Number of classes | 7 |
+| Feature type | Numerical |
+| Target | Bean variety |
+
+### Classification Classes
+
+以下の7種類の豆を分類します。
+
+- Seker
+- Barbunya
+- Bombay
+- Cali
+- Horoz
+- Sira
+- Dermason
+
+### Features
+
+豆の形状・寸法に関する16個の特徴量を使用します。
+
+主な特徴量：
+
+- Area
+- Perimeter
+- MajorAxisLength
+- MinorAxisLength
+- AspectRation
+- Eccentricity
+- ConvexArea
+- EquivDiameter
+- Extent
+- Solidity
+- roundness
+- Compactness
+- ShapeFactor1～4
+
+## Implementations
+
+### 1. Basic Neural Network
+
+File: `NN_Classification_pytorch.py`
+
+PyTorchを用いた全結合ニューラルネットワークによる多クラス分類です。
+
+主な実装内容：
+
+- Neural Networkモデルの定義
+- 隠れ層数・各層のユニット数の設定
+- ReLUによる活性化
+- Dropoutによる正則化
+- Cross Entropy Lossによる損失計算
+- Adamによるパラメータ最適化
+- ミニバッチ学習
+- GPU / CPUの実行デバイス切り替え
+- 学習曲線の可視化
+- Early Stopping
+
+### 2. Hyperparameter Optimization with Optuna
+
+File: `NN_Classification_optuna.py`
+
+Optunaを用いて、ニューラルネットワークのハイパーパラメータを探索します。
+
+主な探索対象：
+
+- 隠れ層数
+- 各隠れ層のユニット数
+- Dropout率
+
+検証データにおけるLossを目的関数として、ハイパーパラメータを探索します。
+
+### 3. Optuna with Stratified K-Fold Cross Validation
+
+File: `NN_Classification_optuna_Kfold.py`
+
+Stratified K-Foldによる交差検証をOptunaのハイパーパラメータ探索に組み合わせた実装です。
+
+主な実装内容：
+
+- Stratified K-Fold（5分割）
+- 各Foldにおけるモデルの学習・評価
+- Foldごとの評価Loss・Accuracyの集計
+- 交差検証結果に基づくハイパーパラメータ探索
+
+各Foldで訓練データと検証データを分割し、訓練データに対して標準化をFitした後、検証データに適用する構成としています。
+
+### 4. Google Colab
+
+File: `Colab_run.ipynb`
+
+Google Colab上で実行するためのNotebookです。
+
+## Model Architecture
+
+本プロジェクトでは、隠れ層数や各層のユニット数を変更可能な全結合ニューラルネットワークを実装しています。
+
+基本構成：
+
+Input Layer → Hidden Layers（Linear + ReLU + Dropout）→ Output Layer
+
+出力層では7クラスの分類に対応し、Cross Entropy Lossを用いて学習します。
+
+## Preprocessing
+
+- 重複データの確認・削除
+- Label Encodingによる目的変数の数値化
+- StandardScalerによる特徴量の標準化
+- 訓練データ・検証データの分割
+- ミニバッチ形式への変換
+
+## Training
+
+- Framework：PyTorch
+- Loss Function：Cross Entropy Loss
+- Optimizer：Adam
+- Activation Function：ReLU
+- Regularization：Dropout
+- Early Stopping：Validation Lossに基づく学習停止
+- Hyperparameter Optimization：Optuna
+
+## Environment
+
+- Python
+- PyTorch
+- Optuna
+- scikit-learn
+- pandas
+- NumPy
+- Matplotlib
+
+環境構築用ファイル：
+
+- `environment.yml`
+
+Condaを利用する場合：
+
+```bash
+conda env create -f environment.yml
+conda activate my_env
+```
+
+## How to Run
+
+リポジトリをクローンします。
+
+```bash
+git clone https://github.com/Temp-Muraoka/NN_Classification.git
+cd NN_Classification
+```
+
+実行例：
+
+```bash
+python NN_Classification_pytorch.py
+python NN_Classification_optuna.py
+python NN_Classification_optuna_Kfold.py
+```
+
+データセットは以下のディレクトリに配置してください。
+
+```text
+data/
+└── Dry_Bean_Dataset/
+    └── Dry_Bean_Dataset.xlsx
+```
+
+## Evaluation
+
+モデルの評価には、主に以下の指標を使用します。
+
+- Accuracy
+- Cross Entropy Loss
+- Training / Validation Loss
+
+交差検証では、各Foldの評価結果を集計し、モデル性能を確認します。
+
+## Results
+
+学習結果については、今後以下を整理・掲載予定です。
+
+- 学習曲線（Training / Validation Loss）
+- Accuracy
+- Optunaによる探索履歴
+- 交差検証における各Foldの評価結果
+
+※実際の実行結果を確認したうえで数値を追記します。
+
+## Notes
+
+本リポジトリは個人学習・自主開発を目的としたものです。
+
+独自に定義したニューラルネットワークの構造、学習ループ、評価処理と、PyTorchなどの既存ライブラリを利用した部分を組み合わせて実装しています。
+
+なお、本リポジトリでは独立した最終テストデータによる汎化性能評価は実施していません。記載する評価結果は、検証データまたは交差検証による結果です。
